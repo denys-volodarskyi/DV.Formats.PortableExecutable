@@ -1,15 +1,10 @@
 # Portable Executable File Format
 
-## PEImage
+> Work in progress
 
-## PEImageReader
+Currently it can:
 
-```
-var img = PEImageReader.ReadImage("path");
-```
+- [x] Read base and section headers
 
-## PEImageWriter
+According to documentation at https://learn.microsoft.com/en-us/windows/win32/debug/pe-format
 
-```
-PEImageWriter.Write(dst, img);
-```
