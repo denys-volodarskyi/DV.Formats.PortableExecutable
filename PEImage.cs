@@ -245,7 +245,7 @@ public enum DataDirectoryType
     Debug,
     Architecture,
     GlobalPtr,
-    TLSTable,
+    TLS,
     LoadConfigTable,
     BoundImport,
     IAT,
