@@ -237,4 +237,67 @@ public class PEImageReader
     }
 
     private static bool IsGoodSectionNameChar(byte b) => b >= 33 && b <= 126;
+
+    public bool ReadTLS(out TLS tls)
+    {
+        tls = default;
+
+        if (!Image.GetDataDirectory(DataDirectoryType.TLS, out var dir) || dir.Empty)
+            return false;
+
+        if (!SeekRva((uint)dir.Address))
+        {
+            Log($"TLS directory not found at 0x{dir.Address:X}");
+            return false;
+        }
+
+        // TLS header.
+        var hdr = new TLSDirectoryHeader
+        {
+            RawDataStartVA = ReadPEUint(),
+            RawDataEndVA = ReadPEUint(),
+            AddressOfIndex = ReadPEUint(),
+            AddressOfCallbacks = ReadPEUint(),
+            SizeOfZeroFill = Reader.ReadUInt32(),
+            Characteristics = Reader.ReadUInt32()
+        };
+
+        // TSL callbacks.
+        if (hdr.AddressOfCallbacks == 0)
+            return false;
+
+        if (!Image.VaToRva(hdr.AddressOfCallbacks, out var callbacks_rva))
+        {
+            Log($"Address of TLS callbacks not found: 0x{hdr.AddressOfCallbacks:X}");
+            return false;
+        }
+
+        ReadNullTerminatedList(callbacks_rva, ReadPEUint, out var callbacks);
+
+        tls = new TLS
+        {
+            AddressOfCallbacksRVA = callbacks_rva,
+            Callbacks = callbacks
+        };
+
+        return true;
+    }
+
+    private bool ReadNullTerminatedList<T>(uint rva, Func<T> read_func, out List<T> list) where T : struct
+    {
+        if (SeekRva(rva))
+        {
+            list = new List<T>();
+            while (true)
+            {
+                var value = read_func();
+                if (value.Equals(default(T)))
+                    break;
+                list.Add(value);
+            }
+            return true;
+        }
+        list = default;
+        return false;
+    }
 }
