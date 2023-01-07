@@ -6,7 +6,7 @@ public class PEImageReader
 {
     public bool IsMapped { get; }
 
-    public Stream Stream { get; }
+    private Stream Stream { get; }
     private readonly BinaryReader Reader;
 
     private void Seek(long position) => Stream.Position = position;
