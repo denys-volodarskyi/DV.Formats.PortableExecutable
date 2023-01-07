@@ -10,6 +10,18 @@ public class PEImageReader
     private readonly BinaryReader Reader;
 
     private void Seek(long position) => Stream.Position = position;
+
+    public bool SeekRva(uint rva)
+    {
+        if (Image.RvaToSection(rva, out var sec))
+        {
+            var pos = sec.RawAddress + (rva - sec.RawAddress);
+            Seek(pos);
+            return true;
+        }
+        return false;
+    }
+
     private ulong ReadPEUint()
     {
         if (Image.Is32BitPE)
