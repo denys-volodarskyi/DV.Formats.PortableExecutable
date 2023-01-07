@@ -85,6 +85,21 @@ public class PEImage
         value = default;
         return false;
     }
+
+    /// <summary>
+    /// Try to convert absolute address to relative one.
+    /// </summary>
+    public bool VaToRva(ulong va, out uint rva)
+    {
+        if (va >= ImageBase)
+        {
+            rva = (uint)(va - ImageBase);
+            return true;
+        }
+
+        rva = default;
+        return false;
+    }
 }
 
 public struct Section
