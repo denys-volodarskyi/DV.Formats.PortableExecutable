@@ -15,7 +15,7 @@ public class PEImageReader
     {
         if (Image.RvaToSection(rva, out var sec))
         {
-            var pos = sec.RawAddress + (rva - sec.RawAddress);
+            var pos = sec.RawAddress + (rva - sec.VirtualAddress);
             Seek(pos);
             return true;
         }
