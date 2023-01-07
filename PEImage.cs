@@ -57,6 +57,17 @@ public class PEImage
     public uint LoaderFlags { get; set; }
 
     public List<AddressRange> DataDirectories { get; } = new();
+    public bool GetDataDirectory(DataDirectoryType type, out AddressRange dir)
+    {
+        var idx = (int)type;
+        if (idx < DataDirectories.Count)
+        {
+            dir = DataDirectories[idx];
+            return true;
+        }
+        dir = default;
+        return false;
+    }
 
     public List<Section> Sections { get; } = new();
 
