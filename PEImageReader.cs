@@ -22,6 +22,8 @@ public class PEImageReader
         return false;
     }
 
+    public bool SeekVa(ulong va) => Image.VaToRva(va, out var rva) && SeekRva(rva);
+
     private ulong ReadPEUint()
     {
         if (Image.Is32BitPE)
