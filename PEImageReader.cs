@@ -37,15 +37,13 @@ public class PEImageReader
 
     private static DateTime DecodeTimeStampUtc(uint datetimestamp) => DateTimeOffset.FromUnixTimeSeconds(datetimestamp).UtcDateTime;
 
-    private void Log(string message)
-    {
-        Debug.WriteLine(message);
-    }
+    private static void LogDbg(string message) => Debug.Write(message);
 
-    private void ErrorLog(string message)
-    {
-        Debug.WriteLine(message);
-    }
+    public Action<string> LogFunc { get; set; } = LogDbg;
+
+    private void Log(string message) => LogFunc?.Invoke(message + "\n");
+
+    private void ErrorLog(string message) => Log("[Error] " + message);
 
     public PEImageReader(Stream stream, bool is_mapped)
     {
@@ -112,9 +110,12 @@ public class PEImageReader
 
         var data_dir_begin = Stream.Position;
         var data_dir_max_possible = (opt_hdr_end - data_dir_begin) / 8;
-        if (data_dir_cnt_declared > data_dir_max_possible)
-            Log($"Declared number of data directories ({data_dir_cnt_declared}) is more than max possible ({data_dir_max_possible}).");
         var data_dir_cnt = Math.Min(data_dir_cnt_declared, data_dir_max_possible);
+        if (data_dir_cnt_declared > data_dir_max_possible)
+        {
+            Log($"Declared number of data directories ({data_dir_cnt_declared}) is more than max possible ({data_dir_max_possible}).\n" +
+                $"Will load {data_dir_cnt} directories.");
+        }
         ReadDataDirectories((int)data_dir_cnt);
 
         ReadSectionHeaders(NumberOfSections);
