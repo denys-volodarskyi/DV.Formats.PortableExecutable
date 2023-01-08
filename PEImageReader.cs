@@ -53,6 +53,19 @@ public class PEImageReader
     }
 
     /// <summary>
+    /// Check if stream has MZ+PE signatures.
+    /// </summary>
+    public static bool IsMzPe(Stream src)
+    {
+        src.Position = 0;
+        if (src.ReadByte() == 'M' && src.ReadByte() == 'Z')
+        {
+            src.Position = 0x3C;
+            if (src.ReadByte() == 'P' && src.ReadByte() == 'E' && src.ReadByte() == 0 && src.ReadByte() == 0)
+                return true;
+        }
+        return false;
+    }
     /// Checks if there is MZ/PE signatures and reads headers and sections
     /// needed for further parsing.
     /// </summary>
