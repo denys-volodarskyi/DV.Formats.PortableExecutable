@@ -274,10 +274,26 @@ public class PEImageReader
 
         ReadNullTerminatedList(callbacks_rva, ReadPEUint, out var callbacks);
 
+        // Callbacks are VAs.
+        // Convert to RVAs.
+        for (var i = 0; i < callbacks.Count; i++)
+        {
+            var va = callbacks[i];
+
+            if (!Image.VaToRva(va, out var rva))
+            {
+                Log($"Failed to convert TLS callback VA to RVA: 0x{va:X}");
+                return false;
+            }
+
+            callbacks[i] = rva;
+        }
+
+
         tls = new TLS
         {
-            AddressOfCallbacksRVA = callbacks_rva,
-            Callbacks = callbacks
+            CAllbacksArrayRVA = callbacks_rva,
+            ListOfCallbackRVAs = callbacks
         };
 
         return true;

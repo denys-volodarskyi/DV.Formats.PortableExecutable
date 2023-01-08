@@ -2,8 +2,8 @@
 
 public class TLS
 {
-    public ulong AddressOfCallbacksRVA { get; internal set; }
-    public List<ulong> Callbacks { get; internal set; } = new();
+    public ulong CAllbacksArrayRVA { get; internal set; }
+    public List<ulong> ListOfCallbackRVAs { get; internal set; } = new();
 }
 
 public struct TLSDirectoryHeader
