@@ -66,6 +66,14 @@ public class PEImageReader
         }
         return false;
     }
+
+    public bool Open(out PEImage img)
+    {
+        img = Image;
+        return Open();
+    }
+
+    /// <summary>
     /// Checks if there is MZ/PE signatures and reads headers and sections
     /// needed for further parsing.
     /// </summary>
