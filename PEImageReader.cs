@@ -78,6 +78,18 @@ public class PEImageReader
     }
 
     public string ReadNullTerminatedString() => ReadNullTerminatedString(Encoding.ASCII);
+
+    private string ReadStringA(uint rva)
+    {
+        if (rva != 0)
+        {
+            if (SeekRva(rva))
+                return ReadNullTerminatedString();
+        }
+
+        return "";
+    }
+
     public PEImage Image { get; } = new PEImage();
 
     private static DateTime DecodeTimeStampUtc(uint datetimestamp) => DateTimeOffset.FromUnixTimeSeconds(datetimestamp).UtcDateTime;
