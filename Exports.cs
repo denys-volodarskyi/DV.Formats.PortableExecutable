@@ -2,13 +2,13 @@
 
 public class ExportTable
 {
-    public DateTime DateTimeUtc { get; internal set; }
+    public DateTime? DateTimeUtc { get; internal set; }
 
     public ushort Major { get; internal set; }
 
     public ushort Minor { get; internal set; }
 
-    public string Name { get; internal set; } = "";
+    public string Name { get; internal set; }
 
     public List<ExportSymbol> Symbols { get; internal set; } = new();
 }

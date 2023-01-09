@@ -423,15 +423,19 @@ public class PEImageReader
 
         table = new ExportTable
         {
-            DateTimeUtc = DecodeTimeStampUtc(Time_Date_Stamp),
             Major = Major_Version,
             Minor = Minor_Version,
             Name = ReadStringA(Name_RVA)
         };
 
+        if (Time_Date_Stamp == 0 || Time_Date_Stamp == uint.MaxValue)
+            table.DateTimeUtc = null;
+        else
+            table.DateTimeUtc = DecodeTimeStampUtc(Time_Date_Stamp);
+
         if (Address_Table_Entries_Count == 0)
             return true;
-        
+
         if (Export_Address_Table_RVA == 0)
         {
             Log($"Exported address count is {Address_Table_Entries_Count}, but address array not specified");
