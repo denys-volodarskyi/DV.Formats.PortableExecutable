@@ -260,6 +260,24 @@ public class PEImageReader
 
     private static bool IsGoodSectionNameChar(byte b) => b >= 33 && b <= 126;
 
+    private bool ReadNullTerminatedList<T>(uint rva, Func<T> read_func, out List<T> list) where T : struct
+    {
+        if (SeekRva(rva))
+        {
+            list = new List<T>();
+            while (true)
+            {
+                var value = read_func();
+                if (value.Equals(default(T)))
+                    break;
+                list.Add(value);
+            }
+            return true;
+        }
+        list = default;
+        return false;
+    }
+
     public bool ReadTLS(out TLS tls)
     {
         tls = default;
@@ -319,23 +337,5 @@ public class PEImageReader
         };
 
         return true;
-    }
-
-    private bool ReadNullTerminatedList<T>(uint rva, Func<T> read_func, out List<T> list) where T : struct
-    {
-        if (SeekRva(rva))
-        {
-            list = new List<T>();
-            while (true)
-            {
-                var value = read_func();
-                if (value.Equals(default(T)))
-                    break;
-                list.Add(value);
-            }
-            return true;
-        }
-        list = default;
-        return false;
     }
 }
