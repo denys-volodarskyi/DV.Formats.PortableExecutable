@@ -33,6 +33,18 @@ public class PEImageReader
         throw new NotSupportedException();
     }
 
+    private bool ReadList<T>(uint rva, int count, Func<T> read_func, out List<T> list)
+    {
+        if (SeekRva(rva))
+        {
+            list = new List<T>();
+            while (count-- > 0)
+                list.Add(read_func());
+            return true;
+        }
+        list = default;
+        return false;
+    }
 
     private bool ReadNullTerminatedList<T>(uint rva, Func<T> read_func, out List<T> list) where T : struct
     {
