@@ -63,6 +63,21 @@ public class PEImageReader
         list = default;
         return false;
     }
+
+    private string ReadNullTerminatedString(Encoding encoding)
+    {
+        var bytes = new List<byte>(16);
+        while (true)
+        {
+            var b = Stream.ReadByte();
+            if (b <= 0)
+                break;
+            bytes.Add((byte)b);
+        }
+        return encoding.GetString(bytes.ToArray());
+    }
+
+    public string ReadNullTerminatedString() => ReadNullTerminatedString(Encoding.ASCII);
     public PEImage Image { get; } = new PEImage();
 
     private static DateTime DecodeTimeStampUtc(uint datetimestamp) => DateTimeOffset.FromUnixTimeSeconds(datetimestamp).UtcDateTime;
