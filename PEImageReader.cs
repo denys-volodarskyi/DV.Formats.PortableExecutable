@@ -377,4 +377,106 @@ public class PEImageReader
 
         return true;
     }
+
+    public bool ReadExportTable(out ExportTable table)
+    {
+        // Required:
+        // 
+        //   Export directory table
+        //   Export address table
+        // 
+        // Optional to export names:
+        // 
+        //   Name pointer table
+        //   Ordinal table
+        //   Export name table
+
+        table = null;
+
+        if (!Image.GetDataDirectory(DataDirectoryType.ExportTable, out var dir))
+        {
+            return false;
+        }
+
+        if (!SeekRva((uint)dir.Address))
+        {
+            Log($"Export directory not found at 0x{dir.Address:X}");
+            return false;
+        }
+
+        var Export_Flags = Reader.ReadUInt32();                // Reserved, must be 0.
+        var Time_Date_Stamp = Reader.ReadUInt32();             // The time and date that the export data was created.
+        var Major_Version = Reader.ReadUInt16();               // The major version number.The major and minor version numbers can be set by the user.
+        var Minor_Version = Reader.ReadUInt16();               // The minor version number.
+        var Name_RVA = Reader.ReadUInt32();                    // The address of the ASCII string that contains the name of the DLL.
+                                                               // This address is relative to the image base.
+        var Ordinal_Base = Reader.ReadUInt32();                // The starting ordinal number for exports in this image.
+                                                               // This field specifies the starting ordinal number for the export address table.
+                                                               // It is usually set to 1.
+        var Address_Table_Entries_Count = Reader.ReadUInt32(); // The number of entries in the export address table.
+        var Number_of_Name_Pointers = Reader.ReadUInt32();     // The number of entries in the name pointer table.
+                                                               // This is also the number of entries in the ordinal table.
+        var Export_Address_Table_RVA = Reader.ReadUInt32();    // The address of the export address table, relative to the image base.
+        var Name_Pointer_RVA = Reader.ReadUInt32();            // The address of the export name pointer table, relative to the image base.
+                                                               // The table size is given by the Number of Name Pointers field.
+        var Ordinal_Table_RVA = Reader.ReadUInt32();           // The address of the ordinal table, relative to the image base.
+
+        table = new ExportTable
+        {
+            DateTimeUtc = DecodeTimeStampUtc(Time_Date_Stamp),
+            Major = Major_Version,
+            Minor = Minor_Version,
+            Name = ReadStringA(Name_RVA)
+        };
+
+        if (Address_Table_Entries_Count == 0)
+            return true;
+        
+        if (Export_Address_Table_RVA == 0)
+        {
+            Log($"Exported address count is {Address_Table_Entries_Count}, but address array not specified");
+            return false;
+        }
+
+        if (!ReadList(Export_Address_Table_RVA, (int)Address_Table_Entries_Count, Reader.ReadUInt32, out var rvas))
+        {
+            Log("Failed to read export address RVAs");
+            return false;
+        }
+
+        // Allocate symbols.
+        for (var j = 0; j < Address_Table_Entries_Count; j++)
+            table.Symbols.Add(new ExportSymbol());
+
+        // Fill with RVAs or forwarders.
+        for (var i = 0; i < Address_Table_Entries_Count; i++)
+        {
+            if (dir.Has(rvas[i]))
+                table.Symbols[i].Forwarder = ReadStringA(rvas[i]); // forwarder
+            else
+                table.Symbols[i].RVA = rvas[i];
+        }
+
+        if (Number_of_Name_Pointers > 0)
+        {
+            if (ReadList(Ordinal_Table_RVA, (int)Number_of_Name_Pointers, Reader.ReadUInt16, out var ordinals))
+            {
+                if (ReadList(Name_Pointer_RVA, (int)Number_of_Name_Pointers, Reader.ReadUInt32, out var namervas))
+                {
+                    for (var i = 0; i < Number_of_Name_Pointers; i++)
+                    {
+                        var ordinal = ordinals[i];
+                        table.Symbols[ordinal].Ordinal = ordinal + Ordinal_Base;
+                        table.Symbols[ordinal].Name = ReadStringA(namervas[i]);
+                    }
+                }
+                else
+                    Log("Failed to read export names RVAs");
+            }
+            else
+                Log("Failed to read export ordinals");
+        }
+
+        return true;
+    }
 }
