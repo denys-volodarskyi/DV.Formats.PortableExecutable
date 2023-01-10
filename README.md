@@ -2,8 +2,6 @@
 
 According to documentation at https://learn.microsoft.com/en-us/windows/win32/debug/pe-format
 
-> Work in progress
-
 - [x] Read base headers, section headers, data directory headers.
 - [x] Read TLS callbacks.
 - [x] Read Export Table.
