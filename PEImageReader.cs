@@ -398,6 +398,9 @@ public class PEImageReader
             return false;
         }
 
+        if (dir.Address == 0)
+            return false;
+
         if (!SeekRva((uint)dir.Address))
         {
             Log($"Export directory not found at 0x{dir.Address:X}");
