@@ -79,15 +79,16 @@ public class PEImageReader
 
     public string ReadNullTerminatedString() => ReadNullTerminatedString(Encoding.ASCII);
 
-    private string ReadStringA(uint rva)
+    private bool ReadStringA(uint rva, out string str)
     {
-        if (rva != 0)
-        {
             if (SeekRva(rva))
-                return ReadNullTerminatedString();
+        {
+            str = ReadNullTerminatedString();
+            return true;
         }
 
-        return "";
+        str = null;
+        return false;
     }
 
     public PEImage Image { get; } = new PEImage();
@@ -424,11 +425,18 @@ public class PEImageReader
                                                                // The table size is given by the Number of Name Pointers field.
         var Ordinal_Table_RVA = Reader.ReadUInt32();           // The address of the ordinal table, relative to the image base.
 
+        string name = "";
+        if (Name_RVA != 0 && !ReadStringA(Name_RVA, out name))
+        {
+            Log("Error reading export module name.");
+            return false;
+        }
+
         table = new ExportTable
         {
             Major = Major_Version,
             Minor = Minor_Version,
-            Name = ReadStringA(Name_RVA)
+            Name = name
         };
 
         if (Time_Date_Stamp == 0 || Time_Date_Stamp == uint.MaxValue)
@@ -459,9 +467,19 @@ public class PEImageReader
         for (var i = 0; i < Address_Table_Entries_Count; i++)
         {
             if (dir.Has(rvas[i]))
-                table.Symbols[i].Forwarder = ReadStringA(rvas[i]); // forwarder
+            {
+                // Forwarded.
+                if (!ReadStringA(rvas[i], out var fwdname))
+                {
+                    Log("Error reading export forwarder name");
+                    return false;
+                }
+                table.Symbols[i].Forwarder = fwdname;
+            }
             else
+            {
                 table.Symbols[i].RVA = rvas[i];
+        }
         }
 
         if (Number_of_Name_Pointers > 0)
@@ -472,9 +490,15 @@ public class PEImageReader
                 {
                     for (var i = 0; i < Number_of_Name_Pointers; i++)
                     {
+                        if (!ReadStringA(namervas[i], out var symname))
+                        {
+                            Log("Error reading exported symbol name");
+                            return false;
+                        }
+
                         var ordinal = ordinals[i];
                         table.Symbols[ordinal].Ordinal = ordinal + Ordinal_Base;
-                        table.Symbols[ordinal].Name = ReadStringA(namervas[i]);
+                        table.Symbols[ordinal].Name = symname;
                     }
                 }
                 else
