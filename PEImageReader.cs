@@ -378,7 +378,7 @@ public class PEImageReader
         return true;
     }
 
-    public bool ReadExportTable(out ExportTable table)
+    public bool ReadExports(out ExportTable table)
     {
         // Required:
         // 

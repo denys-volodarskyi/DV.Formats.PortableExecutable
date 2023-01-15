@@ -31,7 +31,7 @@ using (var stream = File.OpenRead(@"c:\my.exe"))
         }
 
         // Read Export Table.
-        if (reader.ReadExportTable(out var exports))
+        if (reader.ReadExports(out var exports))
         {
             // ...
         }
