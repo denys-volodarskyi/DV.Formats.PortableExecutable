@@ -5,6 +5,7 @@ According to documentation at https://learn.microsoft.com/en-us/windows/win32/de
 - [x] Read base headers, section headers, data directory headers.
 - [x] Read TLS callbacks.
 - [x] Read Export Table.
+- [x] Read Import Table.
 
 Usage example:
 
@@ -32,6 +33,12 @@ using (var stream = File.OpenRead(@"c:\my.exe"))
 
         // Read Export Table.
         if (reader.ReadExports(out var exports))
+        {
+            // ...
+        }
+
+        // Read Import Table.
+        if (reader.ReadImports(out var imports))
         {
             // ...
         }
