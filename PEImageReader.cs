@@ -81,7 +81,7 @@ public class PEImageReader
 
     private bool ReadStringA(uint rva, out string str)
     {
-            if (SeekRva(rva))
+        if (SeekRva(rva))
         {
             str = ReadNullTerminatedString();
             return true;
@@ -479,7 +479,7 @@ public class PEImageReader
             else
             {
                 table.Symbols[i].RVA = rvas[i];
-        }
+            }
         }
 
         if (Number_of_Name_Pointers > 0)
@@ -509,5 +509,147 @@ public class PEImageReader
         }
 
         return true;
+    }
+
+    public bool ReadImports(out List<ImportedModule> modules)
+    {
+        if (!Image.GetDataDirectory(DataDirectoryType.Imports, out var dir))
+        {
+            modules = null;
+            return false;
+        }
+
+        // Ignore directory size.
+        // Stop on empty import directory.
+        modules = new();
+        var rva = (uint)dir.Address;
+        while (ReadImportDirectory(rva, out var module))
+        {
+            if (module != null)
+                modules.Add(module);
+            rva += 20;
+        }
+
+        return true;
+    }
+
+    private bool ReadImportDirectory(uint rva, out ImportedModule module)
+    {
+        module = null;
+
+        if (!SeekRva(rva))
+        {
+            Log($"Import directory not found at RVA 0x{rva:X}.");
+            return false;
+        }
+
+        var import_lookup_table_rva = Reader.ReadUInt32();
+        var time_date_stamp = Reader.ReadUInt32();
+        var forwarder_chain = Reader.ReadUInt32();
+        var name_rva = Reader.ReadUInt32();
+        var import_address_table_rva = Reader.ReadUInt32();
+
+        if (import_address_table_rva == 0 &&
+            time_date_stamp == 0 &&
+            forwarder_chain == 0 &&
+            name_rva == 0 &&
+            import_address_table_rva == 0)
+        {
+            // Empty.
+            return false;
+        }
+
+        if (name_rva == 0)
+        {
+            Log("Import directory has bad module name.");
+            return false;
+        }
+        if (!ReadStringA(name_rva, out var name))
+        {
+            Log("Error reading imported module name.");
+            return false;
+        }
+
+        var is_bound = time_date_stamp != 0;
+
+        List<ImportedSymbol> symbols;
+
+        // Import address table.
+        if (is_bound)
+        {
+            throw new Exception("Reading bound import is not implemented yet");
+        }
+        else
+        {
+            // Read from lookup table if it is present.
+            // Otherwise read from address table.
+            var ilt_rva = import_lookup_table_rva != 0 ? import_lookup_table_rva : import_address_table_rva;
+
+            if (!ReadNullTerminatedList(ilt_rva, ReadPEUint, out var items))
+            {
+                Log("Error reading import lookup table.");
+                return false;
+            }
+
+            var bitness = Image.Bitness;
+            symbols = CreateImportSymbolsFromDesc(items, bitness);
+            FillSymbolRVAS(symbols, import_address_table_rva, bitness);
+        }
+
+        module = new ImportedModule
+        {
+            Name = name,
+            Symbols = symbols,
+        };
+
+        return true;
+    }
+
+    private List<ImportedSymbol> CreateImportSymbolsFromDesc(IEnumerable<ulong> items, int bitness)
+    {
+        var symbols = new List<ImportedSymbol>();
+
+        foreach (var value in items)
+        {
+            var sym = new ImportedSymbol();
+
+            bool by_ordinal = ((value >> (bitness - 1)) & 1) != 0;
+
+            if (by_ordinal)
+            {
+                var ordinal = (ushort)value;
+
+                sym.ByOrdinal = true;
+                sym.Ordinal = ordinal;
+            }
+            else
+            {
+                var hint_name_table_rva = (uint)(value & 0x7FFFFFFF);
+
+                if (!SeekRva(hint_name_table_rva))
+                {
+                    throw new Exception("Error reading import hint.");
+                }
+
+                sym.ByOrdinal = false;
+                sym.Hint = Reader.ReadUInt16();
+                sym.Name = ReadNullTerminatedString();
+            }
+
+            symbols.Add(sym);
+        }
+
+        return symbols;
+    }
+
+    private static void FillSymbolRVAS(IEnumerable<ImportedSymbol> symbols, uint begin_rva, int bitness)
+    {
+        var ptrsize = (uint)bitness / 8;
+        var rva = begin_rva;
+        foreach (var symbol in symbols)
+        {
+            symbol.RVA = rva;
+            rva += ptrsize;
+        }
     }
 }

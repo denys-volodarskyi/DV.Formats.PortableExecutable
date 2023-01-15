@@ -261,7 +261,7 @@ public enum DataDirectoryType
     DelayImport = 13,
 
     Resources = 2,
-    
+
     Exceptions = 3,
     Certificate = 4,
     BaseRelocations = 5,
