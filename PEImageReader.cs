@@ -393,7 +393,7 @@ public class PEImageReader
 
         table = null;
 
-        if (!Image.GetDataDirectory(DataDirectoryType.ExportTable, out var dir))
+        if (!Image.GetDataDirectory(DataDirectoryType.Exports, out var dir))
         {
             return false;
         }

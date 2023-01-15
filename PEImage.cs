@@ -251,19 +251,23 @@ public enum IMAGE_SUBSYSTEM
 
 public enum DataDirectoryType
 {
-    ExportTable,
-    ImportTable,
-    ResourceTable,
-    ExceptionTable,
-    CertificateTable,
-    BaseRelocationTable,
-    Debug,
-    Architecture,
-    GlobalPtr,
-    TLS,
-    LoadConfigTable,
-    BoundImport,
-    IAT,
-    DelayImportDescriptor,
-    CLRRuntimeHeader
+    Exports = 0,
+
+    Imports = 1,
+    BoundImport = 11,
+    IAT = 12,
+    DelayImport = 13,
+
+    Resources = 2,
+    
+    Exceptions = 3,
+    Certificate = 4,
+    BaseRelocations = 5,
+    Debug = 6,
+    Architecture = 7,
+    GlobalPtr = 8,
+    TLS = 9,
+    LoadConfig = 10,
+
+    CLRRuntime = 14,
 }
