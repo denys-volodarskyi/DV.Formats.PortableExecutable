@@ -6,6 +6,8 @@ public class PEImage
     public DateTime TimeDateStamp { get; set; }
     public IMAGE_FILE_CHARACTERISTICS Characteristics { get; set; }
 
+    public int Bitness => Is32BitPE ? 32 : Is64BitPE ? 64 : throw new NotImplementedException();
+
     public ushort Magic { get; set; }
     public bool Is32BitPE => Magic == 0x10b;
     public bool Is64BitPE => Magic == 0x20b;
