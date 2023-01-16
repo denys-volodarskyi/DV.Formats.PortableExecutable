@@ -513,7 +513,7 @@ public class PEImageReader
 
     public bool ReadImports(out List<ImportedModule> modules)
     {
-        if (!Image.GetDataDirectory(DataDirectoryType.Imports, out var dir))
+        if (!Image.GetDataDirectory(DataDirectoryType.Imports, out var dir) || dir.Address == 0)
         {
             modules = null;
             return false;
