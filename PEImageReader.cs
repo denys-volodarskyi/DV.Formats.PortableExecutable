@@ -94,7 +94,12 @@ public class PEImageReader
 
     public PEImage Image { get; } = new PEImage();
 
-    private static DateTime DecodeTimeStampUtc(uint datetimestamp) => DateTimeOffset.FromUnixTimeSeconds(datetimestamp).UtcDateTime;
+    private static DateTime? DecodeTimeStampUtc(uint datetimestamp)
+    {
+        return datetimestamp == 0 || datetimestamp == uint.MaxValue
+            ? null
+            : DateTimeOffset.FromUnixTimeSeconds(datetimestamp).UtcDateTime;
+    }
 
     private static void LogDbg(string message) => Debug.Write(message);
 
@@ -437,13 +442,9 @@ public class PEImageReader
         {
             Major = Major_Version,
             Minor = Minor_Version,
-            Name = name
+            Name = name,
+            DateTimeUtc = DecodeTimeStampUtc(Time_Date_Stamp)
         };
-
-        if (Time_Date_Stamp == 0 || Time_Date_Stamp == uint.MaxValue)
-            table.DateTimeUtc = null;
-        else
-            table.DateTimeUtc = DecodeTimeStampUtc(Time_Date_Stamp);
 
         if (Address_Table_Entries_Count == 0)
             return true;
