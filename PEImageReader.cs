@@ -654,4 +654,10 @@ public class PEImageReader
             rva += ptrsize;
         }
     }
+
+    private static ulong AlignUp(ulong value, ulong align)
+    {
+        var (Quotient, Remainder) = Math.DivRem(value, align);
+        return Remainder == 0 ? value : (Quotient + 1) * align;
+    }
 }
