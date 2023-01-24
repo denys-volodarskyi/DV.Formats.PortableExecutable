@@ -11,6 +11,7 @@ public class PEImageReader
 
     private void Seek(long position) => Stream.Position = position;
 
+    public bool SeekRva(ulong rva) => SeekRva((uint)rva);
     public bool SeekRva(uint rva)
     {
         if (Image.RvaToSection(rva, out var sec))
