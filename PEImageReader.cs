@@ -570,6 +570,82 @@ public class PEImageReader
         return true;
     }
 
+    public bool ReadDelayLoadImports(out List<DelayLoadImportedModule> modules)
+    {
+        modules = null;
+
+        if (!Image.GetDataDirectory(DataDirectoryType.DelayImport, out var dir) || dir.Address == 0)
+            return false;
+
+        var rva = (uint)dir.Address;
+        while (true)
+        {
+            if (!SeekRva(rva))
+            {
+                Log($"Failed to seek delay load import descriptor RVA 0x{rva:X}");
+                break;
+            }
+
+            rva += 32;
+
+            if (!ReadDelayLoadImportDescriptor(out var module))
+                break;
+
+            if (modules == null)
+                modules = new();
+
+            modules.Add(module);
+        }
+
+        return modules.Count > 0;
+    }
+
+    private bool ReadDelayLoadImportDescriptor(out DelayLoadImportedModule module)
+    {
+        module = null;
+
+        var attributes = Reader.ReadUInt32();
+        var module_name_rva = Reader.ReadUInt32();
+        var module_handle_rva = Reader.ReadUInt32();
+        var delay_iat_rva = Reader.ReadUInt32();
+        var delay_import_name_table_rva = Reader.ReadUInt32();
+        var bound_delay_import_table_rva = Reader.ReadUInt32();
+        var unload_delay_import_table_rva = Reader.ReadUInt32();
+        var timestamp = DecodeTimeStampUtc(Reader.ReadUInt32());
+
+        if (module_name_rva == 0)
+        {
+            Log("Delay-load import directory module name RVA is 0.");
+            return false;
+        }
+
+        if (!ReadStringA(module_name_rva, out var name))
+        {
+            Log("Error reading imported module name.");
+            return false;
+        }
+
+        if (!ReadNullTerminatedList(delay_import_name_table_rva, ReadPEUint, out var items))
+        {
+            Log("Error reading import lookup table.");
+            return false;
+        }
+
+        var bitness = Image.Bitness;
+        var symbols = CreateImportSymbolsFromDesc(items, bitness);
+        FillSymbolRVAS(symbols, delay_iat_rva, bitness);
+
+        module = new()
+        {
+            Name = name,
+            TimeStamp = timestamp,
+            ModuleHandleRVA = module_handle_rva,
+            Symbols = symbols
+        };
+
+        return true;
+    }
+
     public bool ReadImports(out List<ImportedModule> modules)
     {
         if (!Image.GetDataDirectory(DataDirectoryType.Imports, out var dir) || dir.Address == 0)
@@ -620,9 +696,10 @@ public class PEImageReader
 
         if (name_rva == 0)
         {
-            Log("Import directory has bad module name.");
+            Log("Import directory module name RVA is 0.");
             return false;
         }
+
         if (!ReadStringA(name_rva, out var name))
         {
             Log("Error reading imported module name.");
