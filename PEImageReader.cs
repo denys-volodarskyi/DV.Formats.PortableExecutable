@@ -535,6 +535,41 @@ public class PEImageReader
         return true;
     }
 
+    public bool ReadBoundImport(out BoundImportInfo value)
+    {
+        value = null;
+
+        if (!Image.GetDataDirectory(DataDirectoryType.BoundImport, out var dir) || dir.Address == 0)
+            return false;
+
+        if (!SeekRva(dir.Address))
+        {
+            Log($"Can't seek bound import directory RVA 0x{dir.Address:X}.");
+            return false;
+        }
+
+        var time_date_stamp = DecodeTimeStampUtc(Reader.ReadUInt32());
+
+        var OffsetModuleName = Reader.ReadUInt16();
+        ReadStringA((uint)(dir.Address + OffsetModuleName), out var module_name);
+
+        var NumberOfModuleForwarderRefs = Reader.ReadUInt16();
+
+        if (NumberOfModuleForwarderRefs != 0)
+        {
+            Log($"{nameof(ReadBoundImport)}: declared {NumberOfModuleForwarderRefs} forwarders");
+            Log("But reading of forwarders is not implemented yet.");
+        }
+
+        value = new BoundImportInfo()
+        {
+            ModuleName = module_name,
+            TimeDateStamp = time_date_stamp,
+        };
+
+        return true;
+    }
+
     public bool ReadImports(out List<ImportedModule> modules)
     {
         if (!Image.GetDataDirectory(DataDirectoryType.Imports, out var dir) || dir.Address == 0)
@@ -547,7 +582,7 @@ public class PEImageReader
         // Stop on empty import directory.
         modules = new();
         var rva = (uint)dir.Address;
-        while (ReadImportDirectory(rva, out var module))
+        while (ReadImportDescriptor(rva, out var module))
         {
             if (module != null)
                 modules.Add(module);
@@ -557,7 +592,7 @@ public class PEImageReader
         return true;
     }
 
-    private bool ReadImportDirectory(uint rva, out ImportedModule module)
+    private bool ReadImportDescriptor(uint rva, out ImportedModule module)
     {
         module = null;
 
@@ -599,31 +634,26 @@ public class PEImageReader
         List<ImportedSymbol> symbols;
 
         // Import address table.
-        if (is_bound)
-        {
-            throw new Exception("Reading bound import is not implemented yet");
-        }
-        else
-        {
-            // Read from lookup table if it is present.
-            // Otherwise read from address table.
-            var ilt_rva = import_lookup_table_rva != 0 ? import_lookup_table_rva : import_address_table_rva;
 
-            if (!ReadNullTerminatedList(ilt_rva, ReadPEUint, out var items))
-            {
-                Log("Error reading import lookup table.");
-                return false;
-            }
+        // Read from lookup table if it is present.
+        // Otherwise read from address table.
+        var ilt_rva = import_lookup_table_rva != 0 ? import_lookup_table_rva : import_address_table_rva;
 
-            var bitness = Image.Bitness;
-            symbols = CreateImportSymbolsFromDesc(items, bitness);
-            FillSymbolRVAS(symbols, import_address_table_rva, bitness);
+        if (!ReadNullTerminatedList(ilt_rva, ReadPEUint, out var items))
+        {
+            Log("Error reading import lookup table.");
+            return false;
         }
+
+        var bitness = Image.Bitness;
+        symbols = CreateImportSymbolsFromDesc(items, bitness);
+        FillSymbolRVAS(symbols, import_address_table_rva, bitness);
 
         module = new ImportedModule
         {
             Name = name,
             Symbols = symbols,
+            IsBound = is_bound,
         };
 
         return true;

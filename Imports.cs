@@ -27,7 +27,23 @@ public class ImportedModule
 
     public List<ImportedSymbol> Symbols { get; internal set; } = new();
 
-    public bool Delay { get; internal set; }
+    /// <summary>
+    /// Bound import means there are predefined addresses set at symbols in memory
+    /// to avoid resolving these addresses by names/ordinals.
+    /// <see cref="BoundImportInfo"/>
+    /// <see cref="PEImageReader.ReadBoundImport(out BoundImportInfo)"/>
+    /// </summary>
+    /// <remarks>
+    /// This property is just for more information here.
+    /// You can ignore it.
+    /// </remarks>
+    public bool IsBound { get; internal set; }
 
     public override string ToString() => $"{Name} ({Symbols.Count} import(s))";
+}
+
+public class BoundImportInfo
+{
+    public string ModuleName { get; internal set; }
+    public DateTime? TimeDateStamp { get; internal set; }
 }
