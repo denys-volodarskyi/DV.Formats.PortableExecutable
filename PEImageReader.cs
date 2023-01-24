@@ -14,12 +14,21 @@ public class PEImageReader
     public bool SeekRva(ulong rva) => SeekRva((uint)rva);
     public bool SeekRva(uint rva)
     {
+        // Check if RVA is in headers.
+        if (rva < SizeOfHeadersRawData)
+        {
+            Seek(rva);
+            return true;
+        }
+
+        // Search RVA in sections.
         if (Image.RvaToSection(rva, out var sec))
         {
             var pos = sec.RawAddress + (rva - sec.VirtualAddress);
             Seek(pos);
             return true;
         }
+
         return false;
     }
 
@@ -138,6 +147,11 @@ public class PEImageReader
     }
 
     /// <summary>
+    /// Used to seek RVA inside of headers.
+    /// </summary>
+    private uint SizeOfHeadersRawData;
+
+    /// <summary>
     /// Checks if there is MZ/PE signatures and reads headers and sections
     /// needed for further parsing.
     /// </summary>
@@ -204,6 +218,14 @@ public class PEImageReader
         ReadDataDirectories((int)data_dir_cnt);
 
         ReadSectionHeaders(NumberOfSections);
+
+        // Update size of headers raw data.
+        SizeOfHeadersRawData = (uint)AlignUp((ulong)Stream.Position, Image.FileAlignment);
+        if (Stream.Length < SizeOfHeadersRawData)
+        {
+            Log("File aligned headers raw data size is smaller than stream length.");
+            return false;
+        }
 
         return true;
     }
