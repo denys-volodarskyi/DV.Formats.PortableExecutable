@@ -3,7 +3,7 @@
 public class PEImage
 {
     public IMAGE_FILE_MACHINE Machine { get; set; }
-    public DateTime TimeDateStamp { get; set; }
+    public DateTime? TimeDateStamp { get; set; }
     public IMAGE_FILE_CHARACTERISTICS Characteristics { get; set; }
 
     public int Bitness => Is32BitPE ? 32 : Is64BitPE ? 64 : throw new NotImplementedException();
