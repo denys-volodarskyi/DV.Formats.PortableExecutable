@@ -613,7 +613,6 @@ public class PEImageReader
 
         if (module_name_rva == 0)
         {
-            Log("Delay-load import directory module name RVA is 0.");
             return false;
         }
 
