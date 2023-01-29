@@ -22,4 +22,15 @@ public class ExportSymbol
     public uint Ordinal { get; internal set; }
 
     public uint RVA { get; internal set; }
+
+    public override string ToString()
+    {
+        if (!string.IsNullOrEmpty(Forwarder))
+            return Forwarder;
+
+        if (!string.IsNullOrEmpty(Name))
+            return $"#{Ordinal} {Name}";
+
+        return $"#{Ordinal}";
+    }
 }
