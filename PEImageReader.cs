@@ -432,7 +432,7 @@ public class PEImageReader
 
         if (!SeekRva((uint)dir.Address))
         {
-            Log($"Export directory not found at 0x{dir.Address:X}");
+            Log($"Export directory not found at 0x{dir.Address:X}.");
             return false;
         }
 
@@ -473,64 +473,82 @@ public class PEImageReader
 
         if (Export_Address_Table_RVA == 0)
         {
-            Log($"Exported address count is {Address_Table_Entries_Count}, but address array not specified");
+            Log($"Exported address count is {Address_Table_Entries_Count}, but address array not specified.");
             return false;
         }
 
         if (!ReadList(Export_Address_Table_RVA, (int)Address_Table_Entries_Count, Reader.ReadUInt32, out var rvas))
         {
-            Log("Failed to read export address RVAs");
+            Log("Failed to read export address RVAs.");
             return false;
         }
 
         // Allocate symbols.
-        for (var j = 0; j < Address_Table_Entries_Count; j++)
-            table.Symbols.Add(new ExportSymbol());
+        var symbols = new ExportSymbol[Address_Table_Entries_Count];
 
         // Fill with RVAs or forwarders.
         for (var i = 0; i < Address_Table_Entries_Count; i++)
         {
-            if (dir.Has(rvas[i]))
+            if (rvas[i] != 0)
             {
-                // Forwarded.
-                if (!ReadStringA(rvas[i], out var fwdname))
-                {
-                    Log("Error reading export forwarder name");
-                    return false;
-                }
-                table.Symbols[i].Forwarder = fwdname;
-            }
-            else
-            {
-                table.Symbols[i].RVA = rvas[i];
-            }
-        }
+                symbols[i] = new();
 
-        if (Number_of_Name_Pointers > 0)
-        {
-            if (ReadList(Ordinal_Table_RVA, (int)Number_of_Name_Pointers, Reader.ReadUInt16, out var ordinals))
-            {
-                if (ReadList(Name_Pointer_RVA, (int)Number_of_Name_Pointers, Reader.ReadUInt32, out var namervas))
+                if (dir.Has(rvas[i]))
                 {
-                    for (var i = 0; i < Number_of_Name_Pointers; i++)
+                    // Forwarded.
+                    if (!ReadStringA(rvas[i], out var fwdname))
                     {
-                        if (!ReadStringA(namervas[i], out var symname))
-                        {
-                            Log("Error reading exported symbol name");
-                            return false;
-                        }
-
-                        var ordinal = ordinals[i];
-                        table.Symbols[ordinal].Ordinal = ordinal + Ordinal_Base;
-                        table.Symbols[ordinal].Name = symname;
+                        Log("Error reading export forwarder name.");
+                        return false;
                     }
+                    symbols[i].Forwarder = fwdname;
                 }
                 else
-                    Log("Failed to read export names RVAs");
+                {
+                    symbols[i].RVA = rvas[i];
+                }
             }
-            else
-                Log("Failed to read export ordinals");
         }
+
+        // If there are names.
+        if (Number_of_Name_Pointers > 0)
+        {
+            // Read name ordinals.
+            if (!ReadList(Ordinal_Table_RVA, (int)Number_of_Name_Pointers, Reader.ReadUInt16, out var ordinals))
+            {
+                Log("Failed to read export ordinals.");
+                return false;
+            }
+
+            // Read name pointers (RVAs).
+            if (!ReadList(Name_Pointer_RVA, (int)Number_of_Name_Pointers, Reader.ReadUInt32, out var namervas))
+            {
+                Log("Failed to read export names RVAs.");
+                return false;
+            }
+
+            for (var i = 0; i < Number_of_Name_Pointers; i++)
+            {
+                if (namervas[i] == 0)
+                {
+                    Log("Export symbol name address is 0.");
+                    return false;
+                }
+
+                if (!ReadStringA(namervas[i], out var symname))
+                {
+                    Log("Error reading exported symbol name.");
+                    return false;
+                }
+
+                var ordinal = ordinals[i];
+                symbols[ordinal].Ordinal = ordinal + Ordinal_Base;
+                symbols[ordinal].Name = symname;
+            }
+        }
+
+        // Finally add all created symbols to resulting table.
+        table.Symbols.AddRange(symbols.Where(s => s != null));
 
         return true;
     }
